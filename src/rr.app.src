@@ -1,0 +1,13 @@
+{application, rr,
+[
+	{description, "HTTP GET/PUT Sink"},
+	{vsn, "1.0"},
+	{registered, []},
+	{applications, [
+		kernel,
+		stdlib
+	]},
+	{modules, []},
+	{mod, { rr_app, []}},
+	{env, []}
+]}.
