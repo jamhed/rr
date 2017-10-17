@@ -1,8 +1,8 @@
 -module(rr_swipe).
 -behaviour(gen_server).
 
--define(SWIPE_TIMEOUT, 3600).
--define(KEEP_TIMEOUT, 3600).
+-define(SWIPE_TIMEOUT, application:get_env(rr, swipe_timeout, 3600)).
+-define(KEEP_TIMEOUT, application:get_env(rr, keep_timeou1t, 3600)).
 
 -export([
 	start_link/0, keep/1, swipe/1
