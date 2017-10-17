@@ -3,7 +3,12 @@
 
 init(#{ method := Method, path := Path }=Req0, State) ->
 	try handle_method(Method, Req0) of
-		{ok, Re} -> {ok, Re, State}
+		{ok, Re} ->
+			{ok, Re, State};
+		path_required ->
+			{ok, reply(403, <<"path required">>, Req0), State};
+		file_exists ->
+			{ok, reply(409, <<"file exists">>, Req0), State}
 	catch
 		C:E ->
 			lager:error("~p:~p path:~p ~p", [C, E, Path, erlang:get_stacktrace()]),
@@ -16,7 +21,7 @@ reply(Code, Req) ->
 reply(Code, Msg, Req) ->
 	cowboy_req:reply(Code, #{ <<"connection">> => <<"close">>, <<"content-type">> => <<"text/plain">>}, Msg, Req).
 
-handle_method(<<"PUT">>, #{ path := Path}=Req) ->
+handle_method(<<"PUT">>, #{ path := Path }=Req) ->
 	maybe_write(Path, Req);
 handle_method(<<"GET">>, #{ path := Path }=Req) ->
 	read(Path, Req).
@@ -24,17 +29,19 @@ handle_method(<<"GET">>, #{ path := Path }=Req) ->
 maybe_write(<<"/", Path/binary>>=P, Req) ->
 	case filelib:is_file(Path) of
 		true ->
-			reply(409, <<"file_exists">>, Req);
+			file_exists;
 		false ->
 			write(cowboy_req:read_body(Req), P)
 	end.
 
-write(<<"/">>, Req) -> reply(403, <<"path required">>, Req);
+write(_, <<"/">>) -> path_required;
+
 write({ok, Data, Req},  <<"/", Path/binary>>) ->
 	lager:info("write file:~p size:~p", [Path, cowboy_req:body_length(Req)]),
 	ensure_folder(filename:dirname(Path)),
 	ok = file:write_file(Path, Data),
 	{ok, reply(200, Req)};
+
 write({more, Data, Req}, <<"/", Path/binary>>) ->
 	lager:info("write file:~p size:~p", [Path, cowboy_req:body_length(Req)]),
 	ensure_folder(filename:dirname(Path)),
@@ -45,11 +52,12 @@ write_append(Path, {ok, Data, Req}) ->
 	Req;
 write_append(Path, {more, Data, Req}) ->
 	ok = file:write_file(Path, Data, [append]),
-	write_append(Path, cowboy_req:body(Req)).
+	write_append(Path, cowboy_req:read_body(Req)).
 
 read(<<"/", Path/binary>>, Req) ->
+	lager:info("read_file:~s", [Path]),
 	{ok, Binary} = file:read_file(Path),
-	cowboy_req:reply(200, [{<<"content-length">>, erlang:integer_to_binary(erlang:size(Binary))}], Binary, Req).
+	{ok, cowboy_req:reply(200, #{ <<"content-length">> => erlang:integer_to_binary(erlang:size(Binary)) }, Binary, Req)}.
 
 ensure_folder(Dir) ->
 	ok = filelib:ensure_dir(<<Dir/binary, "/">>).
