@@ -8,7 +8,9 @@ init(#{ method := Method, path := Path }=Req0, State) ->
 		path_required ->
 			{ok, reply(403, <<"path required">>, Req0), State};
 		file_exists ->
-			{ok, reply(409, <<"file exists">>, Req0), State}
+			{ok, reply(409, <<"file exists">>, Req0), State};
+		ok ->
+			{ok, reply(200, <<"ok">>, Req0), State}
 	catch
 		C:E ->
 			lager:error("~p:~p path:~p ~p", [C, E, Path, erlang:get_stacktrace()]),
@@ -24,7 +26,10 @@ reply(Code, Msg, Req) ->
 handle_method(<<"PUT">>, #{ path := Path }=Req) ->
 	maybe_write(Path, Req);
 handle_method(<<"GET">>, #{ path := Path }=Req) ->
-	read(Path, Req).
+	read(Path, Req);
+handle_method(<<"POST">>, #{ path := <<"/", Path/binary>> }=_Req) ->
+	rr_swipe:keep(Path),
+	ok.
 
 maybe_write(<<"/", Path/binary>>=P, Req) ->
 	case filelib:is_file(Path) of
@@ -40,6 +45,7 @@ write({ok, Data, Req},  <<"/", Path/binary>>) ->
 	lager:info("write file:~p size:~p", [Path, cowboy_req:body_length(Req)]),
 	ensure_folder(filename:dirname(Path)),
 	ok = file:write_file(Path, Data),
+	rr_swipe:swipe(Path),
 	{ok, reply(200, Req)};
 
 write({more, Data, Req}, <<"/", Path/binary>>) ->
