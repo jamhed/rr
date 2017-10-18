@@ -43,14 +43,14 @@ maybe_write(<<"/", Path/binary>>=P, Req) ->
 write(_, <<"/">>) -> path_required;
 
 write({ok, Data, Req},  <<"/", Path/binary>>) ->
-	lager:info("write file:~p size:~p", [Path, cowboy_req:body_length(Req)]),
+	lager:info("write file:~s size:~p", [Path, cowboy_req:body_length(Req)]),
 	ensure_folder(filename:dirname(Path)),
 	ok = file:write_file(Path, Data),
 	rr_swipe:swipe(Path),
 	{ok, reply(200, Req)};
 
 write({more, Data, Req}, <<"/", Path/binary>>) ->
-	lager:info("write file:~p size:~p", [Path, cowboy_req:body_length(Req)]),
+	lager:info("write file:~s size:~p", [Path, cowboy_req:body_length(Req)]),
 	ensure_folder(filename:dirname(Path)),
 	{ok, reply(200, write_append(Path, {more, Data, Req}))}.
 
@@ -62,7 +62,7 @@ write_append(Path, {more, Data, Req}) ->
 	write_append(Path, cowboy_req:read_body(Req)).
 
 read(<<"/", Path/binary>>, Req) ->
-	lager:info("read_file:~s", [Path]),
+	lager:info("read file:~s", [Path]),
 	{ok, Binary} = file:read_file(Path),
 	{ok, cowboy_req:reply(200, #{ <<"content-length">> => erlang:integer_to_binary(erlang:size(Binary)) }, Binary, Req)}.
 
