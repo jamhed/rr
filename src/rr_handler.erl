@@ -28,6 +28,7 @@ handle_method(<<"PUT">>, #{ path := Path }=Req) ->
 handle_method(<<"GET">>, #{ path := Path }=Req) ->
 	read(Path, Req);
 handle_method(<<"POST">>, #{ path := <<"/", Path/binary>> }=_Req) ->
+	lager:info("keep file:~s", [Path]),
 	rr_swipe:keep(Path),
 	ok.
 
