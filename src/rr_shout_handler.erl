@@ -1,7 +1,7 @@
 -module(rr_shout_handler).
 -export([loop/1]).
 
--define(CHUNK_SIZE, 96).
+-define(CHUNK_SIZE, 131072).
 
 -record(state, {
 	uri
@@ -42,6 +42,7 @@ send_file(Socket, <<"/", Path/binary>>) ->
 	lager:info("shoutcast file:~p", [Path]),
 	ok = gen_tcp:send(Socket, [response()]),
 	{ok, Fh} = file:open(Path, [read, binary, raw]),
+	inet:setopts(Socket, [{packet,0}, binary]),
 	stream_file(Socket, Fh).
 
 stream_file(Socket, Fh) -> stream_file(Socket, Fh, 0, <<>>).
