@@ -12,6 +12,7 @@ dispatch_rules() ->
 
 start(_Type, _Args) ->
 	{ok, _} = rr_swipe:start_link(),
+	{ok, _} = rr_shout:start_link(9091, {rr_shout_handler, loop}),
 	cowboy:start_clear(rr_http_listener,
 		[{port, 9090}],
 		#{env => #{dispatch => dispatch_rules()}}
