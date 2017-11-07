@@ -12,6 +12,8 @@ init(#{ method := Method, path := Path }=Req0, State) ->
 		ok ->
 			{ok, reply(200, <<"ok">>, Req0), State}
 	catch
+		error:{badmatch,{error,enoent}} ->
+			lager:notice("no file:~p", [Path]);
 		C:E ->
 			lager:error("~p:~p path:~p ~p", [C, E, Path, erlang:get_stacktrace()]),
 			{ok, Re} = reply(404, <<"not_found">>, Req0),
