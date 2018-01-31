@@ -6,7 +6,9 @@
 	{applications, [
 		kernel,
 		stdlib,
-		lager
+		lager,
+		crypto,
+		cowboy
 	]},
 	{modules, []},
 	{mod, { rr_app, []}},
