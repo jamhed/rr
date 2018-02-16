@@ -30,6 +30,8 @@ handle_method(<<"PUT">>, #{ path := Path }=Req) ->
 	maybe_write(Path, Req);
 handle_method(<<"GET">>, #{ path := Path }=Req) ->
 	read(Path, Req);
+handle_method(<<"DELETE">>, #{ path := Path }=Req) ->
+	delete(Path, Req);
 handle_method(<<"POST">>, #{ path := <<"/", Path/binary>> }=_Req) ->
 	lager:info("keep file:~s", [Path]),
 	rr_swipe:keep(Path),
@@ -68,6 +70,10 @@ read(<<"/", Path/binary>>, Req) ->
 	lager:info("read file:~s", [Path]),
 	{ok, Binary} = file:read_file(Path),
 	{ok, cowboy_req:reply(200, #{ <<"content-length">> => erlang:integer_to_binary(erlang:size(Binary)) }, Binary, Req)}.
+
+delete(<<"/", Path/binary>>, Req) ->
+	lager:info("delete file:~s", [Path]),
+	ok = file:delete(Path).
 
 ensure_folder(Dir) ->
 	ok = filelib:ensure_dir(<<Dir/binary, "/">>).
