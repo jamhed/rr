@@ -1,5 +1,5 @@
 devel:
-	rebar3 release
+	rebar3 as devel release
 
 release:
 	rebar3 as prod release
@@ -9,7 +9,6 @@ clean:
 
 clean-all:
 	rebar3 clean -a
-	rm -rf ~/.cache/rebar3
 	rm -f rebar.lock
 	rm -rf _build/
 
@@ -23,4 +22,4 @@ test:
 	rebar3 eunit
 
 console: devel
-	_build/default/rel/rr/bin/rr console
+	_build/devel/rel/rr/bin/rr console

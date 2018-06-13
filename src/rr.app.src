@@ -1,7 +1,7 @@
 {application, rr,
 [
-	{description, "HTTP GET/PUT Sink"},
-	{vsn, "1.0"},
+	{description, "HTTP File Server"},
+	{vsn, "1.0.2"},
 	{registered, []},
 	{applications, [
 		kernel,
