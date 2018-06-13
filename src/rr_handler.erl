@@ -1,8 +1,11 @@
 -module(rr_handler).
 -export([init/2]).
 
-init(#{ method := Method, path := Path }=Req0, State) ->
-	try handle_method(Method, Req0) of
+uri_to_path(_, <<"/">>) -> erlang:error(path_required);
+uri_to_path(Base, Uri) -> <<Base/binary, Uri/binary>>.
+
+init(#{ method := Method, path := Path }=Req0, [BasePath]=State) ->
+	try handle_method(Method, Req0, BasePath) of
 		{ok, Re} ->
 			{ok, Re, State};
 		path_required ->
@@ -26,35 +29,33 @@ reply(Code, Req) ->
 reply(Code, Msg, Req) ->
 	cowboy_req:reply(Code, #{ <<"connection">> => <<"close">>, <<"content-type">> => <<"text/plain">>}, Msg, Req).
 
-handle_method(<<"PUT">>, #{ path := Path }=Req) ->
-	maybe_write(Path, Req);
-handle_method(<<"GET">>, #{ path := Path }=Req) ->
-	read(Path, Req);
-handle_method(<<"DELETE">>, #{ path := Path }=Req) ->
-	delete(Path, Req);
-handle_method(<<"POST">>, #{ path := <<"/", Path/binary>> }=_Req) ->
+handle_method(<<"PUT">>, #{ path := Path }=Req, Base) ->
+	maybe_write(uri_to_path(Base, Path), Req);
+handle_method(<<"GET">>, #{ path := Path }=Req, Base) ->
+	read(uri_to_path(Base, Path), Req);
+handle_method(<<"DELETE">>, #{ path := Path }=Req, Base) ->
+	delete(uri_to_path(Base, Path), Req);
+handle_method(<<"POST">>, #{ path := Path }=_Req, Base) ->
 	lager:info("keep file:~s", [Path]),
-	rr_swipe:keep(Path),
+	rr_swipe:keep(uri_to_path(Base, Path)),
 	ok.
 
-maybe_write(<<"/", Path/binary>>=P, Req) ->
+maybe_write(Path, Req) ->
 	case filelib:is_file(Path) of
 		true ->
 			file_exists;
 		false ->
-			write(cowboy_req:read_body(Req), P)
+			write(Path, cowboy_req:read_body(Req))
 	end.
 
-write(_, <<"/">>) -> path_required;
-
-write({ok, Data, Req},  <<"/", Path/binary>>) ->
+write(Path, {ok, Data, Req}) ->
 	lager:info("write file:~s size:~p", [Path, cowboy_req:body_length(Req)]),
 	ensure_folder(filename:dirname(Path)),
 	ok = file:write_file(Path, Data),
 	rr_swipe:swipe(Path),
 	{ok, reply(200, Req)};
 
-write({more, Data, Req}, <<"/", Path/binary>>) ->
+write(Path, {more, Data, Req}) ->
 	lager:info("write file:~s size:~p", [Path, cowboy_req:body_length(Req)]),
 	ensure_folder(filename:dirname(Path)),
 	{ok, reply(200, write_append(Path, {more, Data, Req}))}.
@@ -66,12 +67,12 @@ write_append(Path, {more, Data, Req}) ->
 	ok = file:write_file(Path, Data, [append]),
 	write_append(Path, cowboy_req:read_body(Req)).
 
-read(<<"/", Path/binary>>, Req) ->
+read(Path, Req) ->
 	lager:info("read file:~s", [Path]),
 	{ok, Binary} = file:read_file(Path),
 	{ok, cowboy_req:reply(200, #{ <<"content-length">> => erlang:integer_to_binary(erlang:size(Binary)) }, Binary, Req)}.
 
-delete(<<"/", Path/binary>>, Req) ->
+delete(Path, _Req) ->
 	lager:info("delete file:~s", [Path]),
 	ok = file:delete(Path).
 
